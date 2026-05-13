@@ -10,6 +10,7 @@ from pathlib import Path
 
 import fitz
 import qrcode
+from PIL import Image
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -144,6 +145,31 @@ def decode_signature_image(data_url):
         data_url = data_url.split(",", 1)[1]
 
     return base64.b64decode(data_url)
+
+
+def rotate_signature_image_bytes(image_bytes, rotation_degrees):
+    try:
+        rotation = float(rotation_degrees or 0)
+
+        if abs(rotation) < 0.01:
+            return image_bytes
+
+        image = Image.open(BytesIO(image_bytes)).convert("RGBA")
+
+        rotated_image = image.rotate(
+            -rotation,
+            expand=True,
+            resample=Image.Resampling.BICUBIC,
+            fillcolor=(255, 255, 255, 0),
+        )
+
+        buffer = BytesIO()
+        rotated_image.save(buffer, format="PNG")
+
+        return buffer.getvalue()
+
+    except Exception:
+        return image_bytes
 
 
 def get_verification_url(fd_code, verify_base_url=None):
@@ -317,6 +343,15 @@ def apply_signatures_to_pdf(
 
         image_bytes = decode_signature_image(
             signature.get("image", "")
+        )
+
+        rotation = float(
+            signature.get("rotation", 0) or 0
+        )
+
+        image_bytes = rotate_signature_image_bytes(
+            image_bytes,
+            rotation
         )
 
         left_percent = float(

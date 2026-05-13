@@ -514,22 +514,35 @@ a {
     pointer-events: none;
 }
 
-.signature-delete {
+.signature-delete,
+.signature-rotate {
     position: absolute;
-    top: -18px;
-    right: -18px;
     display: none;
     width: 34px;
     height: 34px;
     border: none;
     border-radius: 999px;
-    background: #fee2e2 !important;
-    color: #991b1b !important;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 900;
     cursor: pointer;
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.25);
     z-index: 80;
+    align-items: center;
+    justify-content: center;
+}
+
+.signature-delete {
+    top: -18px;
+    right: -18px;
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+}
+
+.signature-rotate {
+    top: -18px;
+    left: -18px;
+    background: #ffffff;
+    color: #111827;
 }
 
 .signature-resize-handle {
@@ -549,9 +562,11 @@ a {
 
 .placed-signature-box:hover .signature-delete,
 .placed-signature-box:hover .signature-resize-handle,
+.placed-signature-box:hover .signature-rotate,
 .placed-signature-box.active-signature .signature-delete,
-.placed-signature-box.active-signature .signature-resize-handle {
-    display: block;
+.placed-signature-box.active-signature .signature-resize-handle,
+.placed-signature-box.active-signature .signature-rotate {
+    display: flex;
 }
 
 .signature-controls,

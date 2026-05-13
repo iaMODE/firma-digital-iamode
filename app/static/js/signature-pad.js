@@ -10,6 +10,30 @@ let drawing = false;
 let signatureColor = window.IAMODE_SIGNATURE_COLOR || "#1d4ed8";
 let documentFinalized = false;
 
+function isMobileViewport() {
+    return window.innerWidth <= 768;
+}
+
+function getSignatureStrokeWidth() {
+    return isMobileViewport() ? 2.2 : 2.6;
+}
+
+function getInitialSignatureWidth(pageWidth) {
+    if (isMobileViewport()) {
+        return Math.max(52, Math.min(90, pageWidth * 0.14));
+    }
+
+    return Math.max(120, Math.min(220, pageWidth * 0.22));
+}
+
+function getMinSignatureWidth() {
+    return isMobileViewport() ? 18 : 32;
+}
+
+function getMaxSignatureWidth(pageWidth) {
+    return Math.max(220, pageWidth * 0.70);
+}
+
 function setupCanvas() {
     const rect = signatureCanvas.getBoundingClientRect();
     const ratio = window.devicePixelRatio || 1;
@@ -21,7 +45,7 @@ function setupCanvas() {
     signatureCtx.lineCap = "round";
     signatureCtx.lineJoin = "round";
     signatureCtx.strokeStyle = signatureColor;
-    signatureCtx.lineWidth = 4;
+    signatureCtx.lineWidth = getSignatureStrokeWidth();
 }
 
 function openSignatureModal() {
@@ -43,6 +67,7 @@ function clearSignature() {
 
     signatureCtx.clearRect(0, 0, rect.width, rect.height);
     signatureCtx.strokeStyle = signatureColor;
+    signatureCtx.lineWidth = getSignatureStrokeWidth();
 }
 
 function getPosition(event) {
@@ -146,6 +171,11 @@ function getPageUnderPointer(x, y) {
     return null;
 }
 
+function applySignatureRotation(signatureBox) {
+    const rotation = parseFloat(signatureBox.dataset.rotation || "0");
+    signatureBox.style.transform = `rotate(${rotation}deg)`;
+}
+
 function saveSignatureState(signatureBox) {
     const parent = signatureBox.parentElement;
     const signatureImg = signatureBox.querySelector("img");
@@ -161,6 +191,10 @@ function saveSignatureState(signatureBox) {
     signatureBox.dataset.leftPercent = leftPx / parentWidth;
     signatureBox.dataset.topPercent = topPx / parentHeight;
     signatureBox.dataset.widthPercent = signatureImg.offsetWidth / parentWidth;
+
+    if (!signatureBox.dataset.rotation) {
+        signatureBox.dataset.rotation = "0";
+    }
 }
 
 function restoreSignatureStates() {
@@ -184,9 +218,10 @@ function restoreSignatureStates() {
 
         if (!Number.isNaN(widthPercent)) {
             signatureImg.style.width = `${widthPercent * parent.offsetWidth}px`;
+            signatureImg.style.height = "auto";
         }
 
-        signatureBox.style.transform = "none";
+        applySignatureRotation(signatureBox);
     });
 }
 
@@ -197,15 +232,18 @@ window.addEventListener("resize", () => {
 function makeSignatureEditable(signatureBox) {
     let isDragging = false;
     let isResizing = false;
+    let isRotating = false;
 
     let startX = 0;
     let startY = 0;
     let initialLeft = 0;
     let initialTop = 0;
     let initialWidth = 0;
+    let initialRotation = 0;
 
     const deleteBtn = signatureBox.querySelector(".signature-delete");
     const resizeHandle = signatureBox.querySelector(".signature-resize-handle");
+    const rotateBtn = signatureBox.querySelector(".signature-rotate");
     const signatureImg = signatureBox.querySelector("img");
 
     function activateSignature() {
@@ -218,6 +256,21 @@ function makeSignatureEditable(signatureBox) {
         });
 
         signatureBox.classList.add("active-signature");
+    }
+
+    function getCenterPoint() {
+        const rect = signatureBox.getBoundingClientRect();
+
+        return {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        };
+    }
+
+    function getAngleFromCenter(pos) {
+        const center = getCenterPoint();
+
+        return Math.atan2(pos.y - center.y, pos.x - center.x) * 180 / Math.PI;
     }
 
     function startDrag(event) {
@@ -262,7 +315,8 @@ function makeSignatureEditable(signatureBox) {
 
             signatureBox.style.left = `${oldRect.left - newParentRect.left}px`;
             signatureBox.style.top = `${oldRect.top - newParentRect.top}px`;
-            signatureBox.style.transform = "none";
+
+            applySignatureRotation(signatureBox);
 
             initialLeft = oldRect.left - newParentRect.left;
             initialTop = oldRect.top - newParentRect.top;
@@ -282,14 +336,15 @@ function makeSignatureEditable(signatureBox) {
 
         signatureBox.style.left = `${newLeft}px`;
         signatureBox.style.top = `${newTop}px`;
-        signatureBox.style.transform = "none";
 
+        applySignatureRotation(signatureBox);
         saveSignatureState(signatureBox);
     }
 
-    function stopDrag() {
+    function stopPointerAction() {
         isDragging = false;
         isResizing = false;
+        isRotating = false;
         saveSignatureState(signatureBox);
     }
 
@@ -316,10 +371,45 @@ function makeSignatureEditable(signatureBox) {
 
         const pos = pointerPosition(event);
         const movement = pos.x - startX;
-        const newWidth = Math.max(90, Math.min(520, initialWidth + movement));
+        const parentWidth = signatureBox.parentElement.offsetWidth;
+
+        const minWidth = getMinSignatureWidth();
+        const maxWidth = getMaxSignatureWidth(parentWidth);
+        const newWidth = Math.max(minWidth, Math.min(maxWidth, initialWidth + movement));
 
         signatureImg.style.width = `${newWidth}px`;
+        signatureImg.style.height = "auto";
 
+        applySignatureRotation(signatureBox);
+        saveSignatureState(signatureBox);
+    }
+
+    function startRotate(event) {
+        if (documentFinalized) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        activateSignature();
+
+        isRotating = true;
+
+        const pos = pointerPosition(event);
+
+        startX = getAngleFromCenter(pos);
+        initialRotation = parseFloat(signatureBox.dataset.rotation || "0");
+    }
+
+    function moveRotate(event) {
+        if (!isRotating || documentFinalized) return;
+
+        event.preventDefault();
+
+        const pos = pointerPosition(event);
+        const currentAngle = getAngleFromCenter(pos);
+        const newRotation = initialRotation + (currentAngle - startX);
+
+        signatureBox.dataset.rotation = String(newRotation);
+        applySignatureRotation(signatureBox);
         saveSignatureState(signatureBox);
     }
 
@@ -334,23 +424,30 @@ function makeSignatureEditable(signatureBox) {
     resizeHandle.addEventListener("mousedown", startResize);
     resizeHandle.addEventListener("touchstart", startResize, { passive: false });
 
+    if (rotateBtn) {
+        rotateBtn.addEventListener("mousedown", startRotate);
+        rotateBtn.addEventListener("touchstart", startRotate, { passive: false });
+    }
+
     signatureBox.addEventListener("mousedown", startDrag);
 
     document.addEventListener("mousemove", (event) => {
         moveDrag(event);
         moveResize(event);
+        moveRotate(event);
     });
 
-    document.addEventListener("mouseup", stopDrag);
+    document.addEventListener("mouseup", stopPointerAction);
 
     signatureBox.addEventListener("touchstart", startDrag, { passive: false });
 
     document.addEventListener("touchmove", (event) => {
         moveDrag(event);
         moveResize(event);
+        moveRotate(event);
     }, { passive: false });
 
-    document.addEventListener("touchend", stopDrag);
+    document.addEventListener("touchend", stopPointerAction);
 
     signatureBox.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -370,9 +467,11 @@ function placeSignatureOnPdf() {
 
     const signatureBox = document.createElement("div");
     signatureBox.className = "placed-signature-box active-signature";
+    signatureBox.dataset.rotation = "0";
 
     signatureBox.innerHTML = `
         <button type="button" class="signature-control signature-delete">×</button>
+        <button type="button" class="signature-control signature-rotate">↻</button>
         <img src="${dataUrl}" alt="Firma" class="placed-signature">
         <span class="signature-resize-handle"></span>
     `;
@@ -380,11 +479,13 @@ function placeSignatureOnPdf() {
     currentPage.appendChild(signatureBox);
 
     const signatureImg = signatureBox.querySelector("img");
-    signatureImg.style.width = `${currentPage.offsetWidth * 0.22}px`;
+    signatureImg.style.width = `${getInitialSignatureWidth(currentPage.offsetWidth)}px`;
+    signatureImg.style.height = "auto";
 
     signatureBox.style.left = `${currentPage.offsetWidth * 0.50 - signatureBox.offsetWidth / 2}px`;
     signatureBox.style.top = `${currentPage.offsetHeight * 0.72 - signatureBox.offsetHeight / 2}px`;
-    signatureBox.style.transform = "none";
+
+    applySignatureRotation(signatureBox);
 
     makeSignatureEditable(signatureBox);
     saveSignatureState(signatureBox);
@@ -400,6 +501,7 @@ function lockPlacedSignatures() {
 
         const deleteBtn = signatureBox.querySelector(".signature-delete");
         const resizeHandle = signatureBox.querySelector(".signature-resize-handle");
+        const rotateBtn = signatureBox.querySelector(".signature-rotate");
 
         if (deleteBtn) {
             deleteBtn.style.display = "none";
@@ -407,6 +509,10 @@ function lockPlacedSignatures() {
 
         if (resizeHandle) {
             resizeHandle.style.display = "none";
+        }
+
+        if (rotateBtn) {
+            rotateBtn.style.display = "none";
         }
 
         signatureBox.style.pointerEvents = "none";
@@ -504,7 +610,8 @@ async function finalizeDocument() {
                 image: signatureImg.src,
                 leftPercent: (signatureRect.left - canvasRect.left) / canvasRect.width,
                 topPercent: (signatureRect.top - canvasRect.top) / canvasRect.height,
-                widthPercent: signatureRect.width / canvasRect.width
+                widthPercent: signatureRect.width / canvasRect.width,
+                rotation: parseFloat(signatureBox.dataset.rotation || "0")
             });
         });
 

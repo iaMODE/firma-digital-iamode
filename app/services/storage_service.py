@@ -1,5 +1,6 @@
 import os
 import time
+import json
 from pathlib import Path
 
 from google.cloud import storage
@@ -130,12 +131,113 @@ def delete_gcs_file(blob_name):
         return False
 
 
+def upload_json_to_gcs(data, blob_name):
+    if not is_gcs_enabled():
+        return None
+
+    if not blob_name:
+        return None
+
+    if data is None:
+        return None
+
+    bucket = _get_bucket()
+
+    if not bucket:
+        return None
+
+    blob = bucket.blob(blob_name)
+
+    try:
+        json_text = json.dumps(
+            data,
+            ensure_ascii=False,
+            indent=4
+        )
+
+        blob.upload_from_string(
+            json_text,
+            content_type="application/json"
+        )
+
+        return blob_name
+
+    except Exception:
+        return None
+
+
+def download_json_from_gcs(blob_name):
+    if not is_gcs_enabled():
+        return None
+
+    if not blob_name:
+        return None
+
+    bucket = _get_bucket()
+
+    if not bucket:
+        return None
+
+    blob = bucket.blob(blob_name)
+
+    try:
+        if not blob.exists():
+            return None
+
+        json_text = blob.download_as_text(
+            encoding="utf-8"
+        )
+
+        return json.loads(json_text)
+
+    except Exception:
+        return None
+
+
+def list_metadata_json_from_gcs(prefix="metadata/"):
+    if not is_gcs_enabled():
+        return []
+
+    bucket = _get_bucket()
+
+    if not bucket:
+        return []
+
+    metadata_items = []
+
+    try:
+        blobs = bucket.list_blobs(prefix=prefix)
+
+        for blob in blobs:
+
+            if not blob.name.endswith(".json"):
+                continue
+
+            try:
+                json_text = blob.download_as_text(
+                    encoding="utf-8"
+                )
+
+                data = json.loads(json_text)
+
+                metadata_items.append(data)
+
+            except Exception:
+                continue
+
+    except Exception:
+        return []
+
+    return metadata_items
+
+
 def delete_signature_request_files_from_gcs(data):
     if not data:
         return
 
     delete_gcs_file(data.get("gcs_original_blob"))
     delete_gcs_file(data.get("gcs_signed_blob"))
+    delete_gcs_file(data.get("gcs_metadata_blob"))
 
 
 def delete_local_file(local_path):

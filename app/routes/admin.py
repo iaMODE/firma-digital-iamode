@@ -21,6 +21,9 @@ from app.services.pdf_service import (
 
 from app.services.storage_service import (
     upload_file_to_gcs,
+    upload_json_to_gcs,
+    download_json_from_gcs,
+    list_metadata_json_from_gcs,
     gcs_file_exists,
     delete_signature_request_files_from_gcs,
 )
@@ -64,53 +67,111 @@ def _request_meta_path(fd_code):
     return REQUESTS_DIR / f"{fd_code}.json"
 
 
+def _request_meta_blob(fd_code):
+    return f"metadata/{fd_code}.json"
+
+
+def _normalize_signature_data(data):
+
+    if not data:
+        return None
+
+    if "allowed_signatures" not in data:
+        data["allowed_signatures"] = DEFAULT_ALLOWED_SIGNATURES
+
+    if "signatures_count" not in data:
+        data["signatures_count"] = 0
+
+    return data
+
+
 def _load_signature_request(fd_code):
 
     meta_path = _request_meta_path(fd_code)
 
-    if not meta_path.exists():
-        return None
+    if meta_path.exists():
 
-    try:
-        with open(meta_path, "r", encoding="utf-8") as file:
-            data = json.load(file)
+        try:
+            with open(meta_path, "r", encoding="utf-8") as file:
 
-            if "allowed_signatures" not in data:
-                data["allowed_signatures"] = DEFAULT_ALLOWED_SIGNATURES
+                data = json.load(file)
 
-            if "signatures_count" not in data:
-                data["signatures_count"] = 0
+                return _normalize_signature_data(data)
 
-            return data
+        except Exception:
+            pass
 
-    except Exception:
-        return None
+    gcs_data = download_json_from_gcs(
+        _request_meta_blob(fd_code)
+    )
+
+    if gcs_data:
+
+        _save_signature_request(
+            fd_code,
+            gcs_data
+        )
+
+        return _normalize_signature_data(gcs_data)
+
+    return None
 
 
 def _load_all_signature_requests():
 
     requests = []
 
-    for meta_file in sorted(
-        REQUESTS_DIR.glob("*.json"),
-        reverse=True
-    ):
+    local_files = list(
+        REQUESTS_DIR.glob("*.json")
+    )
 
-        try:
-            with open(meta_file, "r", encoding="utf-8") as file:
+    if local_files:
 
-                data = json.load(file)
+        for meta_file in sorted(
+            local_files,
+            reverse=True
+        ):
 
-                if "allowed_signatures" not in data:
-                    data["allowed_signatures"] = DEFAULT_ALLOWED_SIGNATURES
+            try:
+                with open(meta_file, "r", encoding="utf-8") as file:
 
-                if "signatures_count" not in data:
-                    data["signatures_count"] = 0
+                    data = json.load(file)
 
-                requests.append(data)
+                    requests.append(
+                        _normalize_signature_data(data)
+                    )
 
-        except Exception:
+            except Exception:
+                continue
+
+        return requests
+
+    gcs_requests = list_metadata_json_from_gcs()
+
+    for data in gcs_requests:
+
+        normalized = _normalize_signature_data(data)
+
+        if not normalized:
             continue
+
+        fd_code = normalized.get("fd_code")
+
+        if fd_code:
+            _save_signature_request(
+                fd_code,
+                normalized
+            )
+
+        requests.append(normalized)
+
+    requests.sort(
+        key=lambda item: item.get(
+            "created_at",
+            ""
+        ),
+        reverse=True
+    )
 
     return requests
 
@@ -126,6 +187,11 @@ def _save_signature_request(fd_code, data):
             ensure_ascii=False,
             indent=4
         )
+
+    upload_json_to_gcs(
+        data,
+        _request_meta_blob(fd_code)
+    )
 
 
 @admin_bp.route("/login", methods=["GET", "POST"])
@@ -307,6 +373,10 @@ def create_signature_request():
         f"signed/{fd_code}.pdf"
     )
 
+    metadata_blob_name = (
+        f"metadata/{fd_code}.json"
+    )
+
     uploaded_original_blob = upload_file_to_gcs(
         original_pdf_path,
         original_blob_name
@@ -336,6 +406,7 @@ def create_signature_request():
         "download_url": None,
         "gcs_original_blob": uploaded_original_blob,
         "gcs_signed_blob": signed_blob_name,
+        "gcs_metadata_blob": metadata_blob_name,
     }
 
     _save_signature_request(fd_code, data)
@@ -350,35 +421,37 @@ def create_signature_request():
 @login_required
 def delete_signature_request(fd_code):
 
-    meta_path = _request_meta_path(fd_code)
+    data = _load_signature_request(fd_code)
 
-    if meta_path.exists():
+    if not data:
+        return redirect(url_for("admin.dashboard"))
 
-        try:
-            with open(meta_path, "r", encoding="utf-8") as file:
-                data = json.load(file)
+    try:
 
-            delete_signature_request_files_from_gcs(data)
+        delete_signature_request_files_from_gcs(data)
 
-            signed_filename = data.get("signed_filename")
+        signed_filename = data.get("signed_filename")
 
-            if signed_filename:
+        if signed_filename:
 
-                signed_path = SIGNED_DIR / signed_filename
+            signed_path = SIGNED_DIR / signed_filename
 
-                if signed_path.exists():
-                    signed_path.unlink()
+            if signed_path.exists():
+                signed_path.unlink()
 
-            original_pdf_path = Path(
-                data.get("original_pdf_path", "")
-            )
+        original_pdf_path = Path(
+            data.get("original_pdf_path", "")
+        )
 
-            if original_pdf_path.exists():
-                original_pdf_path.unlink()
+        if original_pdf_path.exists():
+            original_pdf_path.unlink()
 
+        meta_path = _request_meta_path(fd_code)
+
+        if meta_path.exists():
             meta_path.unlink()
 
-        except Exception:
-            pass
+    except Exception:
+        pass
 
     return redirect(url_for("admin.dashboard"))

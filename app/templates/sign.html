@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}
+Firmar documento | Firma Digital iaMODE
+{% endblock %}
+
+{% block topbar_actions %}
+<div class="pdf-toolbar-top hidden" id="pdfToolbar">
+    <span id="pdfName">{{ document_title or 'Documento PDF' }}</span>
+
+    <button type="button" class="secondary-btn" id="openSignatureBtn">
+        Firmar
+    </button>
+
+    <button type="button" class="primary-action-btn" id="finishSignatureBtn">
+        Finalizar
+    </button>
+
+    {% if not remote_mode %}
+    <button type="button" class="secondary-btn" id="clearPdfBtn">
+        Cambiar PDF
+    </button>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+
+<section
+    class="sign-workspace"
+    data-remote-mode="{{ 'true' if remote_mode else 'false' }}"
+    data-fd-code="{{ fd_code or '' }}"
+    data-initial-pdf-url="{{ initial_pdf_url or '' }}"
+>
+
+    <div class="upload-center" id="uploadPanel">
+        <div class="upload-card">
+            <span class="hero-badge">
+                {% if remote_mode %}
+                    Firma solicitada
+                {% else %}
+                    Paso 1
+                {% endif %}
+            </span>
+
+            <h1 class="sign-title">
+                {% if remote_mode %}
+                    Cargando documento
+                {% else %}
+                    Selecciona el PDF a firmar
+                {% endif %}
+            </h1>
+
+            <p class="sign-description">
+                {% if remote_mode %}
+                    El PDF se abrirá automáticamente para que puedas firmarlo.
+                {% else %}
+                    El documento se abrirá automáticamente en esta misma vista.
+                {% endif %}
+            </p>
+
+            {% if not remote_mode %}
+            <label class="upload-dropzone" for="pdfFile">
+                <span class="upload-icon">📄</span>
+                <span class="upload-title">Seleccionar PDF</span>
+                <span class="upload-text">Solo archivos PDF</span>
+            </label>
+
+            <input
+                type="file"
+                id="pdfFile"
+                accept="application/pdf"
+                class="hidden-file-input"
+            >
+            {% else %}
+            <div class="upload-dropzone">
+                <span class="upload-icon">⏳</span>
+                <span class="upload-title">Preparando PDF</span>
+                <span class="upload-text">Esto tomará unos segundos.</span>
+            </div>
+
+            <input
+                type="file"
+                id="pdfFile"
+                accept="application/pdf"
+                class="hidden-file-input"
+            >
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="viewer-panel hidden" id="viewerPanel">
+        <div class="pdf-viewer" id="pdfViewer"></div>
+    </div>
+
+    <div class="signature-modal hidden" id="signatureModal">
+        <div class="signature-card">
+            <div class="signature-header">
+                <div>
+                    <h2>Firma el documento</h2>
+                    <p>Usa el dedo, mouse o lápiz digital.</p>
+                </div>
+
+                <button type="button" class="icon-btn" id="closeSignatureBtn">
+                    ✕
+                </button>
+            </div>
+
+            <div class="signature-pad-wrap">
+                <canvas id="signatureCanvas"></canvas>
+            </div>
+
+            <div class="signature-actions">
+                <button type="button" class="secondary-btn" id="clearSignatureBtn">
+                    Borrar
+                </button>
+
+                <button type="button" class="primary-action-btn" id="useSignatureBtn">
+                    Usar firma
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="signature-modal hidden" id="statusModal">
+        <div class="signature-card">
+            <div class="signature-header">
+                <div>
+                    <h2 id="statusModalTitle">Aviso</h2>
+                    <p id="statusModalMessage">
+                        Ha ocurrido una situación que impide continuar.
+                    </p>
+                </div>
+
+                <button type="button" class="icon-btn" id="closeStatusModalBtn">
+                    ✕
+                </button>
+            </div>
+
+            <div class="signature-actions">
+                <button type="button" class="primary-action-btn" id="acceptStatusModalBtn">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<script>
+    window.IAMODE_REMOTE_MODE = {{ "true" if remote_mode else "false" }};
+    window.IAMODE_FD_CODE = "{{ fd_code or '' }}";
+    window.IAMODE_INITIAL_PDF_URL = "{{ initial_pdf_url or '' }}";
+    window.IAMODE_DOCUMENT_TITLE = "{{ document_title or 'Documento para firmar' }}";
+    window.IAMODE_SIGNATURE_COLOR = "{{ signature_color or '#1d4ed8' }}";
+</script>
+
+<script src="{{ url_for('static', filename='js/pdf-viewer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/signature-pad.js') }}"></script>
+{% endblock %}

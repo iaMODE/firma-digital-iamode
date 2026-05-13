@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}
+Límite de firmas alcanzado | Firma Digital iaMODE
+{% endblock %}
+
+{% block content %}
+
+<section class="success-page">
+    <div class="success-card">
+
+        <div class="success-icon">⚠️</div>
+
+        <h1>Límite de firmas alcanzado</h1>
+
+        <p>
+            Este documento ya alcanzó la cantidad máxima de firmas autorizadas.
+        </p>
+
+        <p>
+            Si necesitas habilitar firmas adicionales para este documento,
+            contacta al administrador.
+        </p>
+
+        <div class="success-code">
+            {{ fd_code }}
+        </div>
+
+        <a
+            class="success-download-btn"
+            href="https://wa.me/18099231387"
+            target="_blank"
+        >
+            Contactar por WhatsApp
+        </a>
+
+    </div>
+</section>
+
+{% endblock %}

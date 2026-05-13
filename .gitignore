@@ -1,0 +1,26 @@
+# Entorno local
+.env
+.venv/
+venv/
+
+# Credenciales sensibles
+gcs-key.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Flask
+instance/
+
+# Archivos temporales de la app
+uploads/
+signed/
+temp/
+
+# Sistema
+.DS_Store
+Thumbs.db

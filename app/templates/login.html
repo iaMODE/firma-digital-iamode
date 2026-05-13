@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}
+Login Admin | Firma Digital iaMODE
+{% endblock %}
+
+{% block content %}
+
+<section class="login-page">
+
+    <div class="login-card">
+
+        <div class="login-badge">
+            Panel privado
+        </div>
+
+        <h1>
+            Acceso administrador
+        </h1>
+
+        <p class="login-description">
+            Inicia sesión para gestionar solicitudes,
+            monitorear firmas y administrar documentos.
+        </p>
+
+        {% if error %}
+            <div class="login-error">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <form
+            method="POST"
+            class="login-form"
+        >
+
+            <div class="login-field">
+
+                <label>
+                    Usuario
+                </label>
+
+                <input
+                    type="text"
+                    name="username"
+                    placeholder="Usuario administrador"
+                    required
+                    autofocus
+                >
+
+            </div>
+
+            <div class="login-field">
+
+                <label>
+                    Contraseña
+                </label>
+
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="••••••••"
+                    required
+                >
+
+            </div>
+
+            <button
+                type="submit"
+                class="login-submit-btn"
+            >
+                Entrar al panel
+            </button>
+
+        </form>
+
+    </div>
+
+</section>
+
+{% endblock %}

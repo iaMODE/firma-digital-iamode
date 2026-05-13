@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ data.document_title }} | Panel Admin
+{% endblock %}
+
+{% block topbar_actions %}
+
+<a
+    href="{{ url_for('admin.dashboard') }}"
+    class="admin-logout-btn"
+    style="margin-right: 10px;"
+>
+    Volver
+</a>
+
+<a
+    href="{{ url_for('admin.logout') }}"
+    class="admin-logout-btn"
+>
+    Cerrar sesión
+</a>
+
+{% endblock %}
+
+{% block content %}
+
+<section class="request-details-page">
+
+    <div class="request-details-header">
+
+        <div>
+
+            <div class="request-details-badge">
+                Solicitud privada
+            </div>
+
+            <h1>
+                {{ data.document_title }}
+            </h1>
+
+            <p>
+                Información privada y trazabilidad interna
+                de la solicitud de firma digital.
+            </p>
+
+        </div>
+
+        <div class="request-status-wrap">
+
+            {% if data.status == "firmado" %}
+                <span class="status-pill status-signed">
+                    Firmado
+                </span>
+            {% else %}
+                <span class="status-pill status-pending">
+                    Pendiente
+                </span>
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <div class="request-details-grid">
+
+        <div class="request-card">
+
+            <h2>Información general</h2>
+
+            <div class="request-info-list">
+
+                <div class="request-info-row">
+                    <span>Código FD</span>
+                    <strong>{{ data.fd_code }}</strong>
+                </div>
+
+                <div class="request-info-row">
+                    <span>Estado</span>
+                    <strong>{{ data.status }}</strong>
+                </div>
+
+                <div class="request-info-row">
+                    <span>Firmas</span>
+
+                    <strong>
+                        {{ data.signatures_count }}
+                        /
+                        {{ data.allowed_signatures }}
+                    </strong>
+                </div>
+
+                <div class="request-info-row">
+                    <span>Creado</span>
+                    <strong>{{ data.created_at }}</strong>
+                </div>
+
+                <div class="request-info-row">
+                    <span>Expira</span>
+                    <strong>{{ data.expires_at }}</strong>
+                </div>
+
+                <div class="request-info-row">
+                    <span>Última firma</span>
+
+                    <strong>
+                        {{ data.signed_at or '—' }}
+                    </strong>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="request-card">
+
+            <h2>Integridad y almacenamiento</h2>
+
+            <div class="request-info-list">
+
+                <div class="request-info-row">
+                    <span>Hash SHA256</span>
+
+                    <strong class="hash-block">
+                        {{ data.hash_sha256 or 'Pendiente' }}
+                    </strong>
+                </div>
+
+                <div class="request-info-row">
+                    <span>Integridad</span>
+
+                    <strong>
+                        {% if data.hash_sha256 %}
+                            ✅ Documento íntegro
+                        {% else %}
+                            Pendiente
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="request-info-row">
+                    <span>Archivo original</span>
+
+                    <strong>
+                        {{ data.original_filename }}
+                    </strong>
+                </div>
+
+                <div class="request-info-row">
+                    <span>PDF original</span>
+
+                    <strong>
+                        {% if original_pdf_exists %}
+                            Disponible
+                        {% else %}
+                            No encontrado
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="request-info-row">
+                    <span>PDF firmado</span>
+
+                    <strong>
+                        {% if signed_pdf_exists %}
+                            Disponible
+                        {% else %}
+                            Pendiente
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="request-info-row">
+                    <span>Cloud Storage</span>
+
+                    <strong>
+                        {% if data.gcs_original_blob %}
+                            Activo
+                        {% else %}
+                            Desactivado
+                        {% endif %}
+                    </strong>
+                </div>
+
+                {% if data.gcs_original_blob %}
+
+                <div class="request-info-row">
+                    <span>Blob original</span>
+
+                    <strong class="hash-block">
+                        {{ data.gcs_original_blob }}
+                    </strong>
+                </div>
+
+                {% endif %}
+
+                {% if data.gcs_signed_blob %}
+
+                <div class="request-info-row">
+                    <span>Blob firmado</span>
+
+                    <strong class="hash-block">
+                        {{ data.gcs_signed_blob }}
+                    </strong>
+                </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="request-card">
+
+        <h2>Trazabilidad de firmas</h2>
+
+        <div class="request-info-list">
+
+            {% if data.trace_events %}
+
+                {% for trace in data.trace_events %}
+
+                <div class="trace-event-card">
+
+                    <div class="request-info-row">
+                        <span>Fecha</span>
+                        <strong>{{ trace.signed_at }}</strong>
+                    </div>
+
+                    <div class="request-info-row">
+                        <span>IP</span>
+                        <strong>{{ trace.ip or '—' }}</strong>
+                    </div>
+
+                    <div class="request-info-row">
+                        <span>Dispositivo</span>
+                        <strong>{{ trace.device or '—' }}</strong>
+                    </div>
+
+                    <div class="request-info-row">
+                        <span>Sistema operativo</span>
+                        <strong>{{ trace.os or '—' }}</strong>
+                    </div>
+
+                    <div class="request-info-row">
+                        <span>Navegador</span>
+                        <strong>{{ trace.browser or '—' }}</strong>
+                    </div>
+
+                    <div class="request-info-row">
+                        <span>Hash</span>
+
+                        <strong class="hash-block">
+                            {{ trace.hash_sha256 or '—' }}
+                        </strong>
+                    </div>
+
+                </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <div class="request-info-row">
+                    <span>Estado</span>
+                    <strong>
+                        Aún no hay trazabilidad registrada.
+                    </strong>
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <div class="request-card">
+
+        <h2>Enlaces internos</h2>
+
+        <div class="request-actions">
+
+            <a
+                href="{{ data.sign_url }}"
+                target="_blank"
+                class="request-action-btn"
+            >
+                Abrir enlace de firma
+            </a>
+
+            <a
+                href="{{ url_for('public.verify_document', fd_code=data.fd_code) }}"
+                target="_blank"
+                class="request-action-btn secondary-request-btn"
+            >
+                Página de verificación
+            </a>
+
+            {% if data.status == "firmado" %}
+
+                <a
+                    href="{{ url_for('public.download_signed_pdf', fd_code=data.fd_code) }}"
+                    class="request-action-btn"
+                >
+                    Descargar PDF firmado
+                </a>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}

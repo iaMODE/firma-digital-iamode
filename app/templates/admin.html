@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}
+Panel Admin | Firma Digital iaMODE
+{% endblock %}
+
+{% block topbar_actions %}
+
+<a
+    href="{{ url_for('admin.logout') }}"
+    class="admin-logout-btn"
+>
+    Cerrar sesión
+</a>
+
+{% endblock %}
+
+{% block content %}
+
+<section class="admin-page">
+
+    <div class="admin-header">
+        <h1>Solicitudes de firma</h1>
+
+        <p>
+            Sube un PDF, personaliza el enlace y monitorea el estado de firma.
+        </p>
+    </div>
+
+    <form
+        class="admin-upload-card"
+        method="POST"
+        action="{{ url_for('admin.create_signature_request') }}"
+        enctype="multipart/form-data"
+    >
+
+        <div class="admin-form-header">
+            <h2>Nueva solicitud</h2>
+
+            <p>
+                El enlace de firma, la multifirma y el PDF estarán disponibles durante 48 horas.
+            </p>
+        </div>
+
+        <div class="admin-form-grid">
+
+            <div class="admin-field">
+                <label>PDF</label>
+
+                <input
+                    type="file"
+                    name="pdf"
+                    accept="application/pdf"
+                    required
+                >
+            </div>
+
+            <div class="admin-field">
+                <label>Título del documento</label>
+
+                <input
+                    type="text"
+                    name="document_title"
+                    placeholder="Ej: Contrato de servicios"
+                    required
+                >
+            </div>
+
+            <div class="admin-field">
+                <label>Color de firma</label>
+
+                <select name="signature_color">
+                    <option value="#1f2937">Negro</option>
+                    <option value="#1d4ed8" selected>Azul tinta</option>
+                    <option value="#1e3a8a">Azul oscuro</option>
+                </select>
+            </div>
+
+            <div class="admin-field">
+                <label>Cantidad máxima de firmas</label>
+
+                <input
+                    type="number"
+                    name="allowed_signatures"
+                    min="1"
+                    value="1"
+                    required
+                >
+            </div>
+
+            <div class="admin-field">
+                <label>Descripción (opcional)</label>
+
+                <textarea
+                    name="document_description"
+                    rows="3"
+                    placeholder="Mensaje breve que verá el firmante al abrir el enlace."
+                ></textarea>
+            </div>
+
+            <div class="admin-field">
+                <label>Imagen de cabecera</label>
+
+                <input
+                    type="url"
+                    name="cover_image"
+                    placeholder="https://..."
+                    value="https://blogger.googleusercontent.com/img/a/AVvXsEjg4cIM8FSFk6oaQXXxfyjYXNsfWoUrkb8rIOkZl1ZUggLgYt8EVt3HukH7CZyrz3uEFMiJo-I80y0wvUGW4J4wA7apFKa2KcNgZnaBXmd4EjzUYf2KGkaY0kdqPCeZJNPyzbjZR_YhuRYVU2XWQbhE4_G1pXzVlvjU-MCp0_PuTBSHivotL3kuosqReq0"
+                >
+            </div>
+
+        </div>
+
+        <button type="submit" class="admin-submit-btn">
+            Generar enlace de firma
+        </button>
+
+    </form>
+
+    {% if signature_requests %}
+
+        <div class="admin-table-card">
+
+            <table class="admin-table">
+
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Título</th>
+                        <th>Estado</th>
+                        <th>Firmas</th>
+                        <th>Creado</th>
+                        <th>Firmado</th>
+                        <th>Detalles</th>
+                        <th>Enlace</th>
+                        <th>WhatsApp</th>
+                        <th>PDF firmado</th>
+                        <th>Eliminar</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for item in signature_requests %}
+
+                    <tr>
+
+                        <td>
+                            <strong>{{ item.fd_code }}</strong>
+                        </td>
+
+                        <td>
+                            <div class="document-title-cell">
+                                <strong>{{ item.document_title }}</strong>
+
+                                {% if item.document_description %}
+                                <span>
+                                    {{ item.document_description }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <td>
+                            {% if item.status == "firmado" %}
+                                <span class="status-pill status-signed">
+                                    Firmado
+                                </span>
+                            {% else %}
+                                <span class="status-pill status-pending">
+                                    Pendiente
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <strong>
+                                {{ item.signatures_count }}
+                                /
+                                {{ item.allowed_signatures }}
+                            </strong>
+                        </td>
+
+                        <td>
+                            {{ item.created_at }}
+                        </td>
+
+                        <td>
+                            {% if item.signed_at %}
+                                {{ item.signed_at }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+
+                        <td>
+
+                            <a
+                                href="{{ url_for('admin.request_details', fd_code=item.fd_code) }}"
+                            >
+                                Ver detalles
+                            </a>
+
+                        </td>
+
+                        <td>
+                            <a
+                                href="{{ item.sign_url }}"
+                                target="_blank"
+                            >
+                                Abrir enlace
+                            </a>
+                        </td>
+
+                        <td>
+                            <a
+                                href="https://wa.me/?text={{ ('Firma este documento: ' ~ item.sign_url)|urlencode }}"
+                                target="_blank"
+                            >
+                                WhatsApp
+                            </a>
+                        </td>
+
+                        <td>
+                            {% if item.status == "firmado" %}
+
+                                <a
+                                    href="{{ url_for('public.download_signed_pdf', fd_code=item.fd_code) }}"
+                                >
+                                    Descargar
+                                </a>
+
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <form
+                                method="POST"
+                                action="{{ url_for('admin.delete_signature_request', fd_code=item.fd_code) }}"
+                                onsubmit="return confirm('¿Eliminar esta solicitud de firma? Esta acción no se puede deshacer.');"
+                            >
+                                <button
+                                    type="submit"
+                                    class="delete-request-btn"
+                                    title="Eliminar solicitud"
+                                >
+                                    🗑️
+                                </button>
+                            </form>
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    {% else %}
+
+        <div class="admin-empty">
+
+            <div class="admin-empty-icon">📄</div>
+
+            <h2>No hay solicitudes todavía</h2>
+
+            <p>
+                Cuando generes enlaces de firma aparecerán aquí.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}

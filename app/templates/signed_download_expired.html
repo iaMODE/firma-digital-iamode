@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}
+Descarga expirada | Firma Digital iaMODE
+{% endblock %}
+
+{% block content %}
+
+<section class="verify-page">
+
+    <div class="verify-card">
+
+        <div class="verify-icon">
+            ⏳
+        </div>
+
+        <h1>
+            Descarga expirada
+        </h1>
+
+        <p class="verify-description">
+
+            La descarga del PDF firmado para:
+
+            <strong>
+                {{ document_title }}
+            </strong>
+
+            ya no está disponible.
+
+        </p>
+
+        <div class="verify-info">
+
+            <div class="verify-row">
+                <span>Código FD</span>
+
+                <strong>
+                    {{ fd_code }}
+                </strong>
+            </div>
+
+            <div class="verify-row">
+                <span>Estado</span>
+
+                <strong class="verify-success">
+                    Documento verificado
+                </strong>
+            </div>
+
+            <div class="verify-row">
+                <span>Disponibilidad</span>
+
+                <strong class="verify-pending">
+                    El PDF firmado solo estuvo disponible
+                    durante 48 horas.
+                </strong>
+            </div>
+
+        </div>
+
+        <a
+            href="https://wa.me/18099231387"
+            target="_blank"
+            class="verify-download-btn"
+        >
+            Solicitar disponibilidad extendida
+        </a>
+
+    </div>
+
+</section>
+
+{% endblock %}

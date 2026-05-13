@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}
+Documento firmado | Firma Digital iaMODE
+{% endblock %}
+
+{% block content %}
+
+<section class="success-page">
+    <div class="success-card">
+
+        <div class="success-icon">✅</div>
+
+        <h1>Documento firmado correctamente</h1>
+
+        <p>
+            El documento fue firmado y registrado correctamente.
+            Puede conservar el siguiente código para fines de verificación.
+        </p>
+
+        {% set fd_code = request.args.get("code", "FD-2026-000001") %}
+
+        <div class="success-code-wrap">
+
+            <div class="success-code" id="fdCode">
+                {{ fd_code }}
+            </div>
+
+            <button
+                type="button"
+                class="copy-code-btn"
+                id="copyCodeBtn"
+                title="Copiar código"
+            >
+                📋
+            </button>
+
+        </div>
+
+    </div>
+</section>
+
+<script>
+
+    const copyCodeBtn = document.getElementById("copyCodeBtn");
+
+    copyCodeBtn.addEventListener("click", async () => {
+
+        const code = document.getElementById("fdCode").innerText;
+
+        try {
+
+            await navigator.clipboard.writeText(code);
+
+            copyCodeBtn.innerText = "✓";
+
+            setTimeout(() => {
+                copyCodeBtn.innerText = "📋";
+            }, 1600);
+
+        } catch (error) {
+
+            alert("No se pudo copiar el código.");
+
+        }
+
+    });
+
+</script>
+
+{% endblock %}

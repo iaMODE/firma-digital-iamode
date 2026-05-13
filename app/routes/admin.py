@@ -1,0 +1,384 @@
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session,
+    current_app,
+)
+
+from pathlib import Path
+from datetime import datetime, timedelta
+from functools import wraps
+import json
+
+from app.services.pdf_service import (
+    save_uploaded_pdf,
+    get_next_fd_code,
+    extract_existing_fd_code_from_pdf,
+)
+
+from app.services.storage_service import (
+    upload_file_to_gcs,
+    gcs_file_exists,
+    delete_signature_request_files_from_gcs,
+)
+
+admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+TEMP_DIR = BASE_DIR / "temp"
+REQUESTS_DIR = TEMP_DIR / "signature_requests"
+SIGNED_DIR = BASE_DIR / "signed"
+
+DEFAULT_COVER_IMAGE = "https://blogger.googleusercontent.com/img/a/AVvXsEjg4cIM8FSFk6oaQXXxfyjYXNsfWoUrkb8rIOkZl1ZUggLgYt8EVt3HukH7CZyrz3uEFMiJo-I80y0wvUGW4J4wA7apFKa2KcNgZnaBXmd4EjzUYf2KGkaY0kdqPCeZJNPyzbjZR_YhuRYVU2XWQbhE4_G1pXzVlvjU-MCp0_PuTBSHivotL3kuosqReq0"
+
+SIGNATURE_COLORS = {
+    "#1f2937": "Negro",
+    "#1d4ed8": "Azul tinta",
+    "#1e3a8a": "Azul oscuro",
+}
+
+DEFAULT_SIGNATURE_COLOR = "#1d4ed8"
+DEFAULT_ALLOWED_SIGNATURES = 1
+
+TEMP_DIR.mkdir(exist_ok=True)
+REQUESTS_DIR.mkdir(exist_ok=True)
+SIGNED_DIR.mkdir(exist_ok=True)
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin.login"))
+
+        return view(*args, **kwargs)
+
+    return wrapped_view
+
+
+def _request_meta_path(fd_code):
+    return REQUESTS_DIR / f"{fd_code}.json"
+
+
+def _load_signature_request(fd_code):
+
+    meta_path = _request_meta_path(fd_code)
+
+    if not meta_path.exists():
+        return None
+
+    try:
+        with open(meta_path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+            if "allowed_signatures" not in data:
+                data["allowed_signatures"] = DEFAULT_ALLOWED_SIGNATURES
+
+            if "signatures_count" not in data:
+                data["signatures_count"] = 0
+
+            return data
+
+    except Exception:
+        return None
+
+
+def _load_all_signature_requests():
+
+    requests = []
+
+    for meta_file in sorted(
+        REQUESTS_DIR.glob("*.json"),
+        reverse=True
+    ):
+
+        try:
+            with open(meta_file, "r", encoding="utf-8") as file:
+
+                data = json.load(file)
+
+                if "allowed_signatures" not in data:
+                    data["allowed_signatures"] = DEFAULT_ALLOWED_SIGNATURES
+
+                if "signatures_count" not in data:
+                    data["signatures_count"] = 0
+
+                requests.append(data)
+
+        except Exception:
+            continue
+
+    return requests
+
+
+def _save_signature_request(fd_code, data):
+
+    meta_path = _request_meta_path(fd_code)
+
+    with open(meta_path, "w", encoding="utf-8") as file:
+        json.dump(
+            data,
+            file,
+            ensure_ascii=False,
+            indent=4
+        )
+
+
+@admin_bp.route("/login", methods=["GET", "POST"])
+def login():
+
+    if session.get("admin_logged_in"):
+        return redirect(url_for("admin.dashboard"))
+
+    error = None
+
+    if request.method == "POST":
+
+        username = request.form.get(
+            "username",
+            ""
+        ).strip()
+
+        password = request.form.get(
+            "password",
+            ""
+        ).strip()
+
+        admin_user = current_app.config.get("ADMIN_USER")
+        admin_password = current_app.config.get("ADMIN_PASSWORD")
+
+        if (
+            username == admin_user
+            and password == admin_password
+        ):
+
+            session["admin_logged_in"] = True
+
+            return redirect(url_for("admin.dashboard"))
+
+        error = "Usuario o contraseña incorrectos."
+
+    return render_template(
+        "login.html",
+        error=error
+    )
+
+
+@admin_bp.route("/logout")
+def logout():
+
+    session.clear()
+
+    return redirect(url_for("admin.login"))
+
+
+@admin_bp.route("/")
+@login_required
+def dashboard():
+
+    signature_requests = _load_all_signature_requests()
+
+    return render_template(
+        "admin.html",
+        signature_requests=signature_requests
+    )
+
+
+@admin_bp.route("/solicitud/<fd_code>")
+@login_required
+def request_details(fd_code):
+
+    data = _load_signature_request(fd_code)
+
+    if not data:
+        return redirect(url_for("admin.dashboard"))
+
+    original_pdf_exists = False
+    signed_pdf_exists = False
+
+    original_pdf_path = Path(
+        data.get("original_pdf_path", "")
+    )
+
+    if original_pdf_path.exists():
+        original_pdf_exists = True
+
+    elif gcs_file_exists(data.get("gcs_original_blob")):
+        original_pdf_exists = True
+
+    signed_filename = data.get("signed_filename")
+
+    if signed_filename:
+
+        signed_pdf_path = SIGNED_DIR / signed_filename
+
+        if signed_pdf_path.exists():
+            signed_pdf_exists = True
+
+        elif gcs_file_exists(data.get("gcs_signed_blob")):
+            signed_pdf_exists = True
+
+    return render_template(
+        "request_details.html",
+        data=data,
+        original_pdf_exists=original_pdf_exists,
+        signed_pdf_exists=signed_pdf_exists
+    )
+
+
+@admin_bp.route("/crear-solicitud", methods=["POST"])
+@login_required
+def create_signature_request():
+
+    pdf_file = request.files.get("pdf")
+
+    if not pdf_file:
+        return redirect(url_for("admin.dashboard"))
+
+    document_title = request.form.get(
+        "document_title",
+        ""
+    ).strip()
+
+    document_description = request.form.get(
+        "document_description",
+        ""
+    ).strip()
+
+    cover_image = request.form.get(
+        "cover_image",
+        ""
+    ).strip()
+
+    signature_color = request.form.get(
+        "signature_color",
+        DEFAULT_SIGNATURE_COLOR
+    ).strip()
+
+    allowed_signatures_raw = request.form.get(
+        "allowed_signatures",
+        ""
+    ).strip()
+
+    if signature_color not in SIGNATURE_COLORS:
+        signature_color = DEFAULT_SIGNATURE_COLOR
+
+    try:
+        allowed_signatures = int(allowed_signatures_raw)
+
+        if allowed_signatures < 1:
+            allowed_signatures = DEFAULT_ALLOWED_SIGNATURES
+
+    except Exception:
+        allowed_signatures = DEFAULT_ALLOWED_SIGNATURES
+
+    if not document_title:
+        document_title = pdf_file.filename
+
+    if not document_description:
+        document_description = (
+            "Documento disponible para firma digital segura."
+        )
+
+    if not cover_image:
+        cover_image = DEFAULT_COVER_IMAGE
+
+    original_pdf_path = save_uploaded_pdf(pdf_file)
+
+    existing_fd_code = extract_existing_fd_code_from_pdf(
+        original_pdf_path
+    )
+
+    fd_code = existing_fd_code or get_next_fd_code()
+
+    created_at = datetime.now()
+
+    expires_at = created_at + timedelta(hours=48)
+
+    original_blob_name = (
+        f"original/{fd_code}.pdf"
+    )
+
+    signed_blob_name = (
+        f"signed/{fd_code}.pdf"
+    )
+
+    uploaded_original_blob = upload_file_to_gcs(
+        original_pdf_path,
+        original_blob_name
+    )
+
+    data = {
+        "fd_code": fd_code,
+        "status": "pendiente",
+        "document_title": document_title,
+        "document_description": document_description,
+        "cover_image": cover_image,
+        "signature_color": signature_color,
+        "allowed_signatures": allowed_signatures,
+        "signatures_count": 0,
+        "original_filename": pdf_file.filename,
+        "original_pdf_path": str(original_pdf_path),
+        "signed_filename": None,
+        "hash_sha256": None,
+        "created_at": created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "expires_at": expires_at.isoformat(),
+        "signed_at": None,
+        "sign_url": url_for(
+            "public.remote_sign",
+            fd_code=fd_code,
+            _external=True
+        ),
+        "download_url": None,
+        "gcs_original_blob": uploaded_original_blob,
+        "gcs_signed_blob": signed_blob_name,
+    }
+
+    _save_signature_request(fd_code, data)
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route(
+    "/eliminar-solicitud/<fd_code>",
+    methods=["POST"]
+)
+@login_required
+def delete_signature_request(fd_code):
+
+    meta_path = _request_meta_path(fd_code)
+
+    if meta_path.exists():
+
+        try:
+            with open(meta_path, "r", encoding="utf-8") as file:
+                data = json.load(file)
+
+            delete_signature_request_files_from_gcs(data)
+
+            signed_filename = data.get("signed_filename")
+
+            if signed_filename:
+
+                signed_path = SIGNED_DIR / signed_filename
+
+                if signed_path.exists():
+                    signed_path.unlink()
+
+            original_pdf_path = Path(
+                data.get("original_pdf_path", "")
+            )
+
+            if original_pdf_path.exists():
+                original_pdf_path.unlink()
+
+            meta_path.unlink()
+
+        except Exception:
+            pass
+
+    return redirect(url_for("admin.dashboard"))

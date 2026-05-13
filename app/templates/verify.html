@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}
+Verificar documento | Firma Digital iaMODE
+{% endblock %}
+
+{% block content %}
+
+<section class="verify-page">
+
+    <div class="verify-card">
+
+        <div class="verify-icon">
+            ✅
+        </div>
+
+        <h1>
+            Documento verificado
+        </h1>
+
+        <p class="verify-description">
+            Este documento fue firmado digitalmente mediante
+            Firma Digital iaMODE.
+        </p>
+
+        <div class="verify-info">
+
+            <div class="verify-row">
+                <span>Código FD</span>
+                <strong>{{ fd_code }}</strong>
+            </div>
+
+            <div class="verify-row">
+                <span>Estado</span>
+
+                {% if data.status == "firmado" %}
+                    <strong class="verify-success">
+                        Firmado correctamente
+                    </strong>
+                {% else %}
+                    <strong class="verify-pending">
+                        Pendiente
+                    </strong>
+                {% endif %}
+            </div>
+
+            <div class="verify-row">
+                <span>Cantidad de firmas</span>
+                <strong>
+                    {{ data.signatures_count or 0 }}
+                </strong>
+            </div>
+
+            <div class="verify-row">
+                <span>Última firma</span>
+
+                <strong>
+                    {{ data.last_signed_at or data.signed_at or "Pendiente" }}
+                </strong>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}

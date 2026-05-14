@@ -263,18 +263,12 @@ def _build_signature_trace_event(signed_at, hash_sha256):
 
 @public_bp.route("/")
 def index():
-    return redirect(url_for("public.sign"))
+    return render_template("landing.html")
 
 
 @public_bp.route("/sign")
 def sign():
-    return render_template(
-        "sign.html",
-        remote_mode=False,
-        fd_code=None,
-        initial_pdf_url=None,
-        signature_color="#1d4ed8"
-    )
+    return render_template("landing.html")
 
 
 @public_bp.route("/firma/<fd_code>")

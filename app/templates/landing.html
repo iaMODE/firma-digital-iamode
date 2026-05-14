@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}
+Firma Digital iaMODE
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('admin.dashboard') }}" class="landing-admin-link">
+    Admin
+</a>
+{% endblock %}
+
+{% block content %}
+
+<section class="landing-hero landing-premium-hero">
+
+    <div class="landing-glow"></div>
+
+    <div class="landing-hero-grid">
+
+        <div class="landing-hero-copy">
+
+            <div class="landing-badge">
+                Firma digital remota • Multifirma • Verificación QR
+            </div>
+
+            <h1 class="landing-title">
+                Firma documentos PDF de forma moderna, segura y profesional
+            </h1>
+
+            <p class="landing-description">
+                Plataforma de firma digital remota para abogados, empresas y profesionales
+                que necesitan enviar documentos, recibir firmas y verificar autenticidad
+                desde cualquier dispositivo.
+            </p>
+
+            <div class="landing-actions">
+
+                <a
+                    href="https://wa.me/18099231387"
+                    target="_blank"
+                    class="landing-primary-btn"
+                >
+                    Contactar por WhatsApp
+                </a>
+
+                <a
+                    href="{{ url_for('public.verify_document', fd_code='FD-2026-000001') }}"
+                    class="landing-secondary-btn"
+                >
+                    Ver ejemplo de verificación
+                </a>
+
+            </div>
+
+        </div>
+
+        <div class="landing-mockup">
+
+            <div class="mockup-window">
+                <div class="mockup-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+
+                <div class="mockup-document">
+                    <div class="mockup-line wide"></div>
+                    <div class="mockup-line"></div>
+                    <div class="mockup-line short"></div>
+
+                    <div class="mockup-signature">
+                        Firma digital
+                    </div>
+
+                    <div class="mockup-qr">
+                        QR
+                    </div>
+
+                    <div class="mockup-code">
+                        FD-2026-000001
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<section class="landing-features">
+
+    <div class="feature-card">
+        <div class="feature-icon">✍️</div>
+        <h3>Firma desde móvil</h3>
+        <p>Firma documentos con el dedo, mouse o stylus desde cualquier dispositivo.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">👥</div>
+        <h3>Multifirma remota</h3>
+        <p>Varias personas pueden firmar el mismo documento desde diferentes lugares.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">⚖️</div>
+        <h3>Uso jurídico</h3>
+        <p>Ideal para abogados, contratos, autorizaciones, acuerdos y documentos profesionales.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">🔐</div>
+        <h3>Verificación QR</h3>
+        <p>Cada documento genera código FD, hash SHA256 y página pública de verificación.</p>
+    </div>
+
+</section>
+
+<section class="landing-how">
+
+    <div class="landing-section-header">
+        <span>Proceso simple</span>
+        <h2>Cómo funciona</h2>
+        <p>Un flujo pensado para enviar, firmar y verificar documentos sin complicaciones.</p>
+    </div>
+
+    <div class="how-grid">
+
+        <div class="how-card">
+            <strong>01</strong>
+            <h3>Sube el PDF</h3>
+            <p>El administrador carga el documento desde el panel privado.</p>
+        </div>
+
+        <div class="how-card">
+            <strong>02</strong>
+            <h3>Envía el enlace</h3>
+            <p>El firmante recibe un enlace único para abrir el documento ya cargado.</p>
+        </div>
+
+        <div class="how-card">
+            <strong>03</strong>
+            <h3>Firma y finaliza</h3>
+            <p>La firma queda insertada en el PDF con código FD y QR verificable.</p>
+        </div>
+
+    </div>
+
+</section>
+
+<section class="landing-verify-preview">
+
+    <div class="verify-preview-card">
+        <div class="verify-preview-icon">✅</div>
+        <h2>Documento verificado</h2>
+        <p>Consulta pública segura mediante código FD y QR.</p>
+
+        <div class="verify-preview-row">
+            <span>Código FD</span>
+            <strong>FD-2026-000001</strong>
+        </div>
+
+        <div class="verify-preview-row">
+            <span>Estado</span>
+            <strong>Firmado correctamente</strong>
+        </div>
+
+        <div class="verify-preview-row">
+            <span>Firmas</span>
+            <strong>Multifirma disponible</strong>
+        </div>
+    </div>
+
+</section>
+
+<section class="landing-bottom-cta">
+
+    <h2>
+        Simplifica la firma de documentos con iaMODE
+    </h2>
+
+    <p>
+        Convierte cada solicitud de firma en una experiencia profesional,
+        verificable y moderna para tus clientes.
+    </p>
+
+    <a
+        href="https://wa.me/18099231387"
+        target="_blank"
+        class="landing-primary-btn"
+    >
+        Solicitar información
+    </a>
+
+</section>
+
+<footer class="landing-footer">
+    <strong>Firma Digital iaMODE</strong>
+    <span>Firma remota • Verificación QR • Multifirma • LegalTech</span>
+</footer>
+
+<a
+    href="https://wa.me/18099231387"
+    target="_blank"
+    class="landing-whatsapp-sticky"
+>
+    WhatsApp
+</a>
+
+{% endblock %}

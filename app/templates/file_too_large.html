@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}
+Archivo demasiado grande | Firma Digital iaMODE
+{% endblock %}
+
+{% block content %}
+
+<section class="expired-page">
+
+    <div class="expired-card">
+
+        <div class="expired-icon">
+            ⚠️
+        </div>
+
+        <h1>
+            Archivo demasiado grande
+        </h1>
+
+        <p class="expired-description">
+            El PDF supera el tamaño máximo permitido de 5 MB para este tipo de solicitud.
+        </p>
+
+        <p class="expired-description">
+            Si necesitas procesar documentos de mayor tamaño,
+            puedes solicitar un Plan Corporativo iaMODE.
+        </p>
+
+        <div class="expired-actions">
+
+            <a
+                href="https://wa.me/18099231387"
+                target="_blank"
+                class="primary-button"
+            >
+                Contactar por WhatsApp
+            </a>
+
+            <a
+                href="{{ url_for('admin.dashboard') }}"
+                class="secondary-button"
+            >
+                Volver al panel
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}

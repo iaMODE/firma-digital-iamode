@@ -119,32 +119,33 @@ def _load_signature_request(fd_code):
 
 def _load_all_signature_requests():
 
-    requests = []
+    requests_map = {}
 
     local_files = list(
         REQUESTS_DIR.glob("*.json")
     )
 
-    if local_files:
+    for meta_file in local_files:
 
-        for meta_file in sorted(
-            local_files,
-            reverse=True
-        ):
+        try:
+            with open(meta_file, "r", encoding="utf-8") as file:
 
-            try:
-                with open(meta_file, "r", encoding="utf-8") as file:
+                data = json.load(file)
 
-                    data = json.load(file)
+                normalized = _normalize_signature_data(data)
 
-                    requests.append(
-                        _normalize_signature_data(data)
-                    )
+                if not normalized:
+                    continue
 
-            except Exception:
-                continue
+                fd_code = normalized.get("fd_code")
 
-        return requests
+                if not fd_code:
+                    continue
+
+                requests_map[fd_code] = normalized
+
+        except Exception:
+            continue
 
     gcs_requests = list_metadata_json_from_gcs()
 
@@ -157,13 +158,32 @@ def _load_all_signature_requests():
 
         fd_code = normalized.get("fd_code")
 
-        if fd_code:
+        if not fd_code:
+            continue
+
+        local_created_at = (
+            requests_map.get(fd_code, {})
+            .get("created_at", "")
+        )
+
+        gcs_created_at = normalized.get(
+            "created_at",
+            ""
+        )
+
+        if (
+            fd_code not in requests_map
+            or gcs_created_at >= local_created_at
+        ):
+
+            requests_map[fd_code] = normalized
+
             _save_signature_request(
                 fd_code,
                 normalized
             )
 
-        requests.append(normalized)
+    requests = list(requests_map.values())
 
     requests.sort(
         key=lambda item: item.get(
@@ -290,11 +310,11 @@ def request_details(fd_code):
 
     return render_template(
         "request_details.html",
-        data=data,
-        original_pdf_exists=original_pdf_exists,
-        signed_pdf_exists=signed_pdf_exists
+         data=data,
+         original_pdf_exists=original_pdf_exists,
+         signed_pdf_exists=signed_pdf_exists,
+         gcs_enabled=True
     )
-
 
 @admin_bp.route("/crear-solicitud", methods=["POST"])
 @login_required

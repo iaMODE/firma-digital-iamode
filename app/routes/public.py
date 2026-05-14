@@ -20,6 +20,8 @@ from app.services.pdf_service import (
 
 from app.services.storage_service import (
     upload_file_to_gcs,
+    upload_json_to_gcs,
+    download_json_from_gcs,
     download_file_from_gcs,
     gcs_file_exists,
     cleanup_old_local_pdfs,
@@ -47,14 +49,30 @@ def _request_meta_path(fd_code):
     return REQUESTS_DIR / f"{fd_code}.json"
 
 
+def _request_meta_blob(fd_code):
+    return f"metadata/{fd_code}.json"
+
+
 def _load_signature_request(fd_code):
     meta_path = _request_meta_path(fd_code)
 
-    if not meta_path.exists():
-        return None
+    if meta_path.exists():
+        with open(meta_path, "r", encoding="utf-8") as file:
+            return json.load(file)
 
-    with open(meta_path, "r", encoding="utf-8") as file:
-        return json.load(file)
+    gcs_data = download_json_from_gcs(
+        _request_meta_blob(fd_code)
+    )
+
+    if gcs_data:
+        _save_signature_request(
+            fd_code,
+            gcs_data
+        )
+
+        return gcs_data
+
+    return None
 
 
 def _save_signature_request(fd_code, data):
@@ -62,6 +80,11 @@ def _save_signature_request(fd_code, data):
 
     with open(meta_path, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
+
+    upload_json_to_gcs(
+        data,
+        _request_meta_blob(fd_code)
+    )
 
 
 def _is_expired(data):
@@ -200,6 +223,7 @@ def _get_client_ip():
         return remote_addr.strip()
 
     return "No disponible"
+
 
 def _build_signature_trace_event(signed_at, hash_sha256):
     user_agent_string = request.headers.get("User-Agent", "")

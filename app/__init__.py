@@ -20,6 +20,10 @@ def create_app():
         "admin123"
     )
 
+    app.config["MAX_CONTENT_LENGTH"] = (
+        5 * 1024 * 1024
+    )
+
     from app.routes.public import public_bp
     from app.routes.admin import admin_bp
 

@@ -71,9 +71,30 @@ def _request_meta_blob(fd_code):
     return f"metadata/{fd_code}.json"
 
 
+def _safe_datetime(value):
+
+    if not value:
+        return datetime.min
+
+    if isinstance(value, datetime):
+        return value
+
+    try:
+        return datetime.fromisoformat(str(value))
+    except Exception:
+        pass
+
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        pass
+
+    return datetime.min
+
+
 def _normalize_signature_data(data):
 
-    if not data:
+    if not data or not isinstance(data, dict):
         return None
 
     if "allowed_signatures" not in data:
@@ -107,12 +128,15 @@ def _load_signature_request(fd_code):
 
     if gcs_data:
 
-        _save_signature_request(
-            fd_code,
-            gcs_data
-        )
+        normalized = _normalize_signature_data(gcs_data)
 
-        return _normalize_signature_data(gcs_data)
+        if normalized:
+            _save_signature_request(
+                fd_code,
+                normalized
+            )
+
+        return normalized
 
     return None
 
@@ -161,34 +185,32 @@ def _load_all_signature_requests():
         if not fd_code:
             continue
 
-        local_created_at = (
-            requests_map.get(fd_code, {})
-            .get("created_at", "")
-        )
+        current_data = requests_map.get(fd_code)
 
-        gcs_created_at = normalized.get(
-            "created_at",
-            ""
-        )
-
-        if (
-            fd_code not in requests_map
-            or gcs_created_at >= local_created_at
-        ):
-
+        if not current_data:
             requests_map[fd_code] = normalized
+            continue
 
-            _save_signature_request(
-                fd_code,
-                normalized
-            )
+        current_updated = _safe_datetime(
+            current_data.get("signed_at")
+            or current_data.get("updated_at")
+            or current_data.get("created_at")
+        )
+
+        gcs_updated = _safe_datetime(
+            normalized.get("signed_at")
+            or normalized.get("updated_at")
+            or normalized.get("created_at")
+        )
+
+        if gcs_updated >= current_updated:
+            requests_map[fd_code] = normalized
 
     requests = list(requests_map.values())
 
     requests.sort(
-        key=lambda item: item.get(
-            "created_at",
-            ""
+        key=lambda item: _safe_datetime(
+            item.get("created_at")
         ),
         reverse=True
     )
@@ -198,18 +220,23 @@ def _load_all_signature_requests():
 
 def _save_signature_request(fd_code, data):
 
+    normalized = _normalize_signature_data(data)
+
+    if not normalized:
+        return
+
     meta_path = _request_meta_path(fd_code)
 
     with open(meta_path, "w", encoding="utf-8") as file:
         json.dump(
-            data,
+            normalized,
             file,
             ensure_ascii=False,
             indent=4
         )
 
     upload_json_to_gcs(
-        data,
+        normalized,
         _request_meta_blob(fd_code)
     )
 
@@ -310,11 +337,12 @@ def request_details(fd_code):
 
     return render_template(
         "request_details.html",
-         data=data,
-         original_pdf_exists=original_pdf_exists,
-         signed_pdf_exists=signed_pdf_exists,
-         gcs_enabled=True
+        data=data,
+        original_pdf_exists=original_pdf_exists,
+        signed_pdf_exists=signed_pdf_exists,
+        gcs_enabled=True
     )
+
 
 @admin_bp.route("/crear-solicitud", methods=["POST"])
 @login_required

@@ -132,26 +132,18 @@ def delete_gcs_file(blob_name):
 
 
 def upload_json_to_gcs(data, blob_name):
-
-    print("=== SUBIENDO JSON A GCS ===")
-    print("BLOB:", blob_name)
-
     if not is_gcs_enabled():
-        print("GCS DESACTIVADO")
         return None
 
     if not blob_name:
-        print("BLOB VACIO")
         return None
 
     if data is None:
-        print("DATA VACIA")
         return None
 
     bucket = _get_bucket()
 
     if not bucket:
-        print("BUCKET NO DISPONIBLE")
         return None
 
     blob = bucket.blob(blob_name)
@@ -168,15 +160,9 @@ def upload_json_to_gcs(data, blob_name):
             content_type="application/json"
         )
 
-        print("JSON SUBIDO CORRECTAMENTE")
-
         return blob_name
 
-    except Exception as error:
-
-        print("ERROR SUBIENDO JSON:")
-        print(str(error))
-
+    except Exception:
         return None
 
 

@@ -21,6 +21,8 @@ QR_DIR = TEMP_DIR / "qr_codes"
 
 COUNTER_FILE = TEMP_DIR / "fd_counter.json"
 
+FD_PATTERN = re.compile(r"FD-(\d{4})-(\d{6})")
+
 
 def ensure_directories():
     UPLOADS_DIR.mkdir(exist_ok=True)
@@ -48,6 +50,9 @@ def cleanup_temp_files(max_age_hours=48):
                 if not file_path.is_file():
                     continue
 
+                if file_path == COUNTER_FILE:
+                    continue
+
                 file_age = now - file_path.stat().st_mtime
 
                 if file_age > max_age_seconds:
@@ -57,25 +62,124 @@ def cleanup_temp_files(max_age_hours=48):
                 continue
 
 
+def _extract_fd_number(fd_code, year):
+    match = FD_PATTERN.search(str(fd_code))
+
+    if not match:
+        return 0
+
+    fd_year = int(match.group(1))
+    fd_number = int(match.group(2))
+
+    if fd_year != year:
+        return 0
+
+    return fd_number
+
+
+def _get_highest_local_fd_number(year):
+    highest = 0
+
+    folders = [
+        UPLOADS_DIR,
+        SIGNED_DIR,
+        TEMP_DIR / "signature_requests",
+    ]
+
+    for folder in folders:
+
+        if not folder.exists():
+            continue
+
+        for path in folder.glob("*"):
+
+            highest = max(
+                highest,
+                _extract_fd_number(path.name, year)
+            )
+
+    return highest
+
+
+def _get_highest_gcs_fd_number(year):
+    highest = 0
+
+    try:
+        from app.services.storage_service import list_metadata_json_from_gcs
+
+        metadata_items = list_metadata_json_from_gcs()
+
+        for item in metadata_items:
+
+            if not item:
+                continue
+
+            highest = max(
+                highest,
+                _extract_fd_number(
+                    item.get("fd_code", ""),
+                    year
+                )
+            )
+
+            highest = max(
+                highest,
+                _extract_fd_number(
+                    item.get("gcs_original_blob", ""),
+                    year
+                )
+            )
+
+            highest = max(
+                highest,
+                _extract_fd_number(
+                    item.get("gcs_signed_blob", ""),
+                    year
+                )
+            )
+
+    except Exception:
+        pass
+
+    return highest
+
+
 def get_next_fd_code():
     ensure_directories()
 
     year = datetime.now().year
+    current_year = str(year)
+
+    counter_number = 0
 
     if COUNTER_FILE.exists():
-        with open(COUNTER_FILE, "r", encoding="utf-8") as file:
-            data = json.load(file)
+
+        try:
+            with open(COUNTER_FILE, "r", encoding="utf-8") as file:
+                data = json.load(file)
+
+            counter_number = int(data.get(current_year, 0))
+
+        except Exception:
+            data = {}
+
     else:
         data = {}
 
-    current_year = str(year)
-    current_number = int(data.get(current_year, 0)) + 1
-    data[current_year] = current_number
+    highest_number = max(
+        counter_number,
+        _get_highest_local_fd_number(year),
+        _get_highest_gcs_fd_number(year)
+    )
+
+    next_number = highest_number + 1
+
+    data[current_year] = next_number
 
     with open(COUNTER_FILE, "w", encoding="utf-8") as file:
         json.dump(data, file, indent=4)
 
-    return f"FD-{year}-{current_number:06d}"
+    return f"FD-{year}-{next_number:06d}"
 
 
 def extract_existing_fd_code_from_pdf(pdf_path):

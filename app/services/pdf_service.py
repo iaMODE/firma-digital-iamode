@@ -334,7 +334,7 @@ def insert_verification_stamp(
         verify_base_url
     )
 
-    margin_right = 8
+    margin_left = 8
     margin_bottom = 8
 
     qr_size = 42
@@ -345,10 +345,10 @@ def insert_verification_stamp(
     block_width = qr_size + text_gap + text_width
     block_height = qr_size
 
-    x1 = page_rect.width - margin_right
+    x0 = margin_left
     y1 = page_rect.height - margin_bottom
 
-    x0 = x1 - block_width
+    x1 = x0 + block_width
     y0 = y1 - block_height
 
     background_rect = fitz.Rect(
@@ -409,7 +409,6 @@ def insert_verification_stamp(
         color=(0.42, 0.46, 0.55),
         overlay=True,
     )
-
 
 def apply_signatures_to_pdf(
     original_pdf_path,

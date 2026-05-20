@@ -35,7 +35,7 @@ TEMP_DIR = BASE_DIR / "temp"
 REQUESTS_DIR = TEMP_DIR / "signature_requests"
 SIGNED_DIR = BASE_DIR / "signed"
 
-DEFAULT_COVER_IMAGE = "https://blogger.googleusercontent.com/img/a/AVvXsEjg4cIM8FSFk6oaQXXxfyjYXNsfWoUrkb8rIOkZl1ZUggLgYt8EVt3HukH7CZyrz3uEFMiJo-I80y0wvUGW4J4wA7apFKa2KcNgZnaBXmd4EjzUYf2KGkaY0kdqPCeZJNPyzbjZR_YhuRYVU2XWQbhE4_G1pXzVlvjU-MCp0_PuTBSHivotL3kuosqReq0"
+DEFAULT_COVER_IMAGE = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhCNtbT7l6GSHFWqW0puQy54R6qK81_CaHqjnh7fDs_IYYSNsjNHmzpw16T9uRC-mynE6tDwwwJKPoMt6RXc5Yoi-zHVcpAIkEPSnvEQfgS1_nP50m4Vr3cTdUIPRdz7MyAur2o96nRm2g50OtKMRITq4Hkf_0AnglcFngo1AusMUxkgtiSdCqu9fcjNGo/s800/70.png"
 
 SIGNATURE_COLORS = {
     "#1f2937": "Negro",

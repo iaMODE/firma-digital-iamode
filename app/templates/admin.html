@@ -134,7 +134,7 @@ Panel Admin | Firma Digital iaMODE
                         <th>Detalles</th>
                         <th>Enlace</th>
                         <th>WhatsApp</th>
-                        <th>PDF firmado</th>
+                        <th>PDF Admin</th>
                         <th>Eliminar</th>
                     </tr>
                 </thead>
@@ -222,17 +222,11 @@ Panel Admin | Firma Digital iaMODE
                         </td>
 
                         <td>
-                            {% if item.status == "firmado" %}
-
-                                <a
-                                    href="{{ url_for('public.download_signed_pdf', fd_code=item.fd_code) }}"
-                                >
-                                    Descargar
-                                </a>
-
-                            {% else %}
-                                —
-                            {% endif %}
+                            <a
+                                href="{{ url_for('admin.admin_download_pdf', fd_code=item.fd_code) }}"
+                            >
+                                Descargar
+                            </a>
                         </td>
 
                         <td>

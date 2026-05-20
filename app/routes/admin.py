@@ -6,6 +6,7 @@ from flask import (
     url_for,
     session,
     current_app,
+    send_file,
 )
 
 from pathlib import Path
@@ -25,6 +26,7 @@ from app.services.storage_service import (
     download_json_from_gcs,
     list_metadata_json_from_gcs,
     gcs_file_exists,
+    download_file_from_gcs,
     delete_signature_request_files_from_gcs,
 )
 
@@ -106,6 +108,13 @@ def _normalize_signature_data(data):
     return data
 
 
+def _render_admin_file_unavailable(fd_code):
+    return render_template(
+        "admin_file_unavailable.html",
+        fd_code=fd_code
+    ), 404
+
+
 def _load_signature_request(fd_code):
 
     meta_path = _request_meta_path(fd_code)
@@ -114,9 +123,7 @@ def _load_signature_request(fd_code):
 
         try:
             with open(meta_path, "r", encoding="utf-8") as file:
-
                 data = json.load(file)
-
                 return _normalize_signature_data(data)
 
         except Exception:
@@ -299,6 +306,75 @@ def dashboard():
         "admin.html",
         signature_requests=signature_requests
     )
+
+
+@admin_bp.route("/descargar/<fd_code>")
+@login_required
+def admin_download_pdf(fd_code):
+
+    data = _load_signature_request(fd_code)
+
+    if not data:
+        return _render_admin_file_unavailable(fd_code)
+
+    signed_filename = data.get("signed_filename") or f"{fd_code}.pdf"
+    signed_filename = Path(signed_filename).name
+    signed_path = SIGNED_DIR / signed_filename
+
+    signed_blob = data.get("gcs_signed_blob") or f"signed/{fd_code}.pdf"
+
+    if signed_path.exists():
+        return send_file(
+            signed_path,
+            as_attachment=True,
+            download_name=signed_filename
+        )
+
+    if signed_blob and gcs_file_exists(signed_blob):
+
+        downloaded = download_file_from_gcs(
+            signed_blob,
+            signed_path
+        )
+
+        if downloaded and signed_path.exists():
+            return send_file(
+                signed_path,
+                as_attachment=True,
+                download_name=signed_filename
+            )
+
+    original_pdf_path_raw = data.get("original_pdf_path", "")
+    original_pdf_path = Path(original_pdf_path_raw) if original_pdf_path_raw else None
+
+    if original_pdf_path and original_pdf_path.exists():
+        return send_file(
+            original_pdf_path,
+            as_attachment=True,
+            download_name=original_pdf_path.name
+        )
+
+    original_blob = data.get("gcs_original_blob") or f"original/{fd_code}.pdf"
+
+    original_filename = data.get("original_filename") or f"{fd_code}-original.pdf"
+    original_filename = Path(original_filename).name
+    local_original_path = TEMP_DIR / original_filename
+
+    if original_blob and gcs_file_exists(original_blob):
+
+        downloaded = download_file_from_gcs(
+            original_blob,
+            local_original_path
+        )
+
+        if downloaded and local_original_path.exists():
+            return send_file(
+                local_original_path,
+                as_attachment=True,
+                download_name=original_filename
+            )
+
+    return _render_admin_file_unavailable(fd_code)
 
 
 @admin_bp.route("/solicitud/<fd_code>")

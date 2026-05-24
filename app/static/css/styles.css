@@ -2261,3 +2261,240 @@ body:has(.landing-hero) .main-content {
         bottom: 14px;
     }
 }
+
+/* =========================================================
+   PHOTO SIGNATURE MODE
+========================================================= */
+
+.signature-mode-switch {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.signature-mode-switch button {
+    flex: 1;
+}
+
+.active-sign-mode {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #ffffff;
+}
+
+.signature-photo-wrap {
+    width: 100%;
+}
+
+.signature-photo-dropzone {
+    min-height: 220px;
+    justify-content: center;
+}
+
+.signature-photo-preview {
+    margin-top: 18px;
+    width: 100%;
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 22px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.signature-photo-preview img {
+    max-width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    display: block;
+}
+
+@media (max-width: 768px) {
+
+    .signature-mode-switch {
+        flex-direction: column;
+    }
+
+    .signature-photo-dropzone {
+        min-height: 180px;
+    }
+
+    .signature-photo-preview img {
+        max-height: 180px;
+    }
+}
+
+/* =========================================================
+   PHOTO SIGNATURE MODE
+========================================================= */
+
+.signature-mode-switch {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.signature-mode-switch button {
+    flex: 1;
+}
+
+.active-sign-mode {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #ffffff;
+}
+
+.signature-photo-wrap {
+    width: 100%;
+}
+
+.signature-photo-dropzone {
+    min-height: 220px;
+    justify-content: center;
+}
+
+.signature-photo-preview {
+    margin-top: 18px;
+    width: 100%;
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 22px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.signature-photo-preview img {
+    max-width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    display: block;
+}
+
+/* =========================================================
+   SIGNATURE CROP MODAL
+========================================================= */
+
+.signature-crop-card {
+    max-width: 900px;
+}
+
+.signature-crop-wrap {
+    width: 100%;
+}
+
+.signature-crop-stage {
+    position: relative;
+    width: 100%;
+    min-height: 420px;
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 24px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#signatureCropImage {
+    max-width: 100%;
+    max-height: 72vh;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
+    display: block;
+}
+
+.signature-crop-box {
+    position: absolute;
+    width: 260px;
+    height: 120px;
+    border: 2px solid #4f46e5;
+    border-radius: 18px;
+    background: rgba(79, 70, 229, 0.08);
+    backdrop-filter: blur(1px);
+    cursor: move;
+    touch-action: none;
+    box-shadow:
+        0 0 0 9999px rgba(15, 23, 42, 0.45),
+        0 10px 30px rgba(15, 23, 42, 0.18);
+}
+
+.signature-crop-handle {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 3px solid #4f46e5;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+}
+
+.crop-handle-tl {
+    top: -10px;
+    left: -10px;
+    cursor: nwse-resize;
+}
+
+.crop-handle-tr {
+    top: -10px;
+    right: -10px;
+    cursor: nesw-resize;
+}
+
+.crop-handle-bl {
+    bottom: -10px;
+    left: -10px;
+    cursor: nesw-resize;
+}
+
+.crop-handle-br {
+    bottom: -10px;
+    right: -10px;
+    cursor: nwse-resize;
+}
+
+.signature-crop-help {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #6b7280;
+}
+
+@media (max-width: 768px) {
+
+    .signature-mode-switch {
+        flex-direction: column;
+    }
+
+    .signature-photo-dropzone {
+        min-height: 180px;
+    }
+
+    .signature-photo-preview img {
+        max-height: 180px;
+    }
+
+    .signature-crop-card {
+        padding: 18px;
+        border-radius: 24px;
+    }
+
+    .signature-crop-stage {
+        min-height: 320px;
+        border-radius: 20px;
+    }
+
+    .signature-crop-box {
+        width: 200px;
+        height: 100px;
+    }
+
+    .signature-crop-help {
+        font-size: 13px;
+    }
+}

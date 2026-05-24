@@ -98,7 +98,7 @@ Firmar documento | Firma Digital iaMODE
             <div class="signature-header">
                 <div>
                     <h2>Firma el documento</h2>
-                    <p>Usa el dedo, mouse o lápiz digital.</p>
+                    <p>Usa el dedo, mouse, lápiz digital o una foto de tu firma.</p>
                 </div>
 
                 <button type="button" class="icon-btn" id="closeSignatureBtn">
@@ -106,8 +106,66 @@ Firmar documento | Firma Digital iaMODE
                 </button>
             </div>
 
-            <div class="signature-pad-wrap">
+            <div class="signature-mode-switch">
+                <button
+                    type="button"
+                    class="secondary-btn active-sign-mode"
+                    id="drawSignatureModeBtn"
+                >
+                    ✍️ Dibujar firma
+                </button>
+
+                <button
+                    type="button"
+                    class="secondary-btn"
+                    id="photoSignatureModeBtn"
+                >
+                    📷 Tomar foto
+                </button>
+            </div>
+
+            <div
+                class="signature-pad-wrap"
+                id="drawSignatureWrap"
+            >
                 <canvas id="signatureCanvas"></canvas>
+            </div>
+
+            <div
+                class="signature-photo-wrap hidden"
+                id="photoSignatureWrap"
+            >
+                <label
+                    for="signaturePhotoInput"
+                    class="upload-dropzone signature-photo-dropzone"
+                >
+                    <span class="upload-icon">📷</span>
+                    <span class="upload-title">
+                        Tomar o seleccionar foto
+                    </span>
+
+                    <span class="upload-text">
+                        Cámara, galería o archivos
+                    </span>
+                </label>
+
+                <input
+                    type="file"
+                    id="signaturePhotoInput"
+                    accept="image/*"
+                    capture="environment"
+                    class="hidden-file-input"
+                >
+
+                <div
+                    class="signature-photo-preview hidden"
+                    id="signaturePhotoPreviewWrap"
+                >
+                    <img
+                        id="signaturePhotoPreview"
+                        alt="Vista previa firma"
+                    >
+                </div>
             </div>
 
             <div class="signature-actions">
@@ -117,6 +175,51 @@ Firmar documento | Firma Digital iaMODE
 
                 <button type="button" class="primary-action-btn" id="useSignatureBtn">
                     Usar firma
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="signature-modal hidden" id="signatureCropModal">
+        <div class="signature-card signature-crop-card">
+            <div class="signature-header">
+                <div>
+                    <h2>Recorta tu firma</h2>
+                    <p>Ajusta el recorte para dejar solo la zona escrita de la firma.</p>
+                </div>
+
+                <button type="button" class="icon-btn" id="closeSignatureCropBtn">
+                    ✕
+                </button>
+            </div>
+
+            <div class="signature-crop-wrap" id="signatureCropWrap">
+                <div class="signature-crop-stage" id="signatureCropStage">
+                    <img
+                        id="signatureCropImage"
+                        alt="Foto de firma para recortar"
+                    >
+
+                    <div class="signature-crop-box" id="signatureCropBox">
+                        <span class="signature-crop-handle crop-handle-tl"></span>
+                        <span class="signature-crop-handle crop-handle-tr"></span>
+                        <span class="signature-crop-handle crop-handle-bl"></span>
+                        <span class="signature-crop-handle crop-handle-br"></span>
+                    </div>
+                </div>
+
+                <p class="signature-crop-help">
+                    Arrastra el cuadro para moverlo. Usa las esquinas para ajustar el tamaño.
+                </p>
+            </div>
+
+            <div class="signature-actions">
+                <button type="button" class="secondary-btn" id="cancelSignatureCropBtn">
+                    Cancelar
+                </button>
+
+                <button type="button" class="primary-action-btn" id="useSignatureCropBtn">
+                    Usar recorte
                 </button>
             </div>
         </div>

@@ -6,6 +6,7 @@ from flask import (
     request,
     jsonify,
     send_file,
+    make_response,
 )
 
 from pathlib import Path
@@ -43,6 +44,16 @@ REQUESTS_DIR.mkdir(exist_ok=True)
 
 cleanup_old_local_pdfs(UPLOADS_DIR)
 cleanup_old_local_pdfs(SIGNED_DIR)
+
+
+def _apply_no_cache_headers(response):
+    response.headers["Cache-Control"] = (
+        "no-store, no-cache, must-revalidate, max-age=0"
+    )
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+    return response
 
 
 def _request_meta_path(fd_code):
@@ -199,7 +210,6 @@ def _get_client_ip():
     )
 
     if forwarded_for:
-
         ip_list = [
             ip.strip()
             for ip in forwarded_for.split(",")
@@ -292,39 +302,61 @@ def remote_sign(fd_code):
     signed_filename = data.get("signed_filename")
 
     if signed_filename:
-
         signed_pdf_path = _ensure_signed_pdf_available(data)
 
         if signed_pdf_path and signed_pdf_path.exists():
-            return render_template(
-                "sign.html",
-                remote_mode=True,
-                fd_code=fd_code,
-                document_title=data.get("document_title", "Documento para firmar"),
-                initial_pdf_url=url_for("public.get_signed_pdf_for_signing", fd_code=fd_code),
-                signature_color=signature_color,
-                og_title=data.get("document_title", "Firma Digital iaMODE"),
-                og_description=data.get(
-                    "document_description",
-                    "Documento disponible para firma digital segura."
-                ),
-                og_image=data.get("cover_image")
+            response = make_response(
+                render_template(
+                    "sign.html",
+                    remote_mode=True,
+                    fd_code=fd_code,
+                    document_title=data.get(
+                        "document_title",
+                        "Documento para firmar"
+                    ),
+                    initial_pdf_url=url_for(
+                        "public.get_signed_pdf_for_signing",
+                        fd_code=fd_code
+                    ),
+                    signature_color=signature_color,
+                    og_title=data.get(
+                        "document_title",
+                        "Firma Digital iaMODE"
+                    ),
+                    og_description=data.get(
+                        "document_description",
+                        "Documento disponible para firma digital segura."
+                    ),
+                    og_image=data.get("cover_image")
+                )
             )
 
-    return render_template(
-        "sign.html",
-        remote_mode=True,
-        fd_code=fd_code,
-        document_title=data.get("document_title", "Documento para firmar"),
-        initial_pdf_url=url_for("public.get_original_pdf", fd_code=fd_code),
-        signature_color=signature_color,
-        og_title=data.get("document_title", "Firma Digital iaMODE"),
-        og_description=data.get(
-            "document_description",
-            "Documento disponible para firma digital segura."
-        ),
-        og_image=data.get("cover_image")
+            return _apply_no_cache_headers(response)
+
+    response = make_response(
+        render_template(
+            "sign.html",
+            remote_mode=True,
+            fd_code=fd_code,
+            document_title=data.get("document_title", "Documento para firmar"),
+            initial_pdf_url=url_for(
+                "public.get_original_pdf",
+                fd_code=fd_code
+            ),
+            signature_color=signature_color,
+            og_title=data.get(
+                "document_title",
+                "Firma Digital iaMODE"
+            ),
+            og_description=data.get(
+                "document_description",
+                "Documento disponible para firma digital segura."
+            ),
+            og_image=data.get("cover_image")
+        )
     )
+
+    return _apply_no_cache_headers(response)
 
 
 @public_bp.route("/api/original-pdf/<fd_code>")
@@ -342,11 +374,15 @@ def get_original_pdf(fd_code):
     if not original_pdf_path.exists():
         return "PDF original no encontrado", 404
 
-    return send_file(
-        original_pdf_path,
-        as_attachment=False,
-        download_name=f"{fd_code}-original.pdf"
+    response = make_response(
+        send_file(
+            original_pdf_path,
+            as_attachment=False,
+            download_name=f"{fd_code}-original.pdf"
+        )
     )
+
+    return _apply_no_cache_headers(response)
 
 
 @public_bp.route("/api/signed-pdf/<fd_code>")
@@ -364,16 +400,24 @@ def get_signed_pdf_for_signing(fd_code):
     if not signed_pdf_path or not signed_pdf_path.exists():
         return "PDF firmado no encontrado", 404
 
-    return send_file(
-        signed_pdf_path,
-        as_attachment=False,
-        download_name=f"{fd_code}.pdf"
+    response = make_response(
+        send_file(
+            signed_pdf_path,
+            as_attachment=False,
+            download_name=f"{fd_code}.pdf"
+        )
     )
+
+    return _apply_no_cache_headers(response)
 
 
 @public_bp.route("/success")
 def success():
-    return render_template("success.html")
+    response = make_response(
+        render_template("success.html")
+    )
+
+    return _apply_no_cache_headers(response)
 
 
 @public_bp.route("/download/<fd_code>")
@@ -507,7 +551,6 @@ def finalize_document():
             signed_pdf_path = SIGNED_DIR / result["signed_filename"]
 
             if signed_pdf_path.exists():
-
                 gcs_signed_blob = signature_request.get(
                     "gcs_signed_blob"
                 )

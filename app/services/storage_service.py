@@ -18,6 +18,7 @@ def _get_bucket():
     bucket_name = _get_bucket_name()
 
     if not bucket_name:
+        print("GCS DISABLED: GCS_BUCKET_NAME vacío")
         return None
 
     client = storage.Client()
@@ -26,32 +27,38 @@ def _get_bucket():
 
 def upload_file_to_gcs(local_path, blob_name):
     if not is_gcs_enabled():
+        print("GCS FILE UPLOAD SKIPPED: GCS no está habilitado")
         return None
 
     if not blob_name:
+        print("GCS FILE UPLOAD SKIPPED: blob_name vacío")
         return None
 
     path = Path(local_path)
 
     if not path.exists():
+        print(f"GCS FILE UPLOAD SKIPPED: archivo local no existe: {path}")
         return None
-
-    bucket = _get_bucket()
-
-    if not bucket:
-        return None
-
-    blob = bucket.blob(blob_name)
 
     try:
+        bucket = _get_bucket()
+
+        if not bucket:
+            print("GCS FILE UPLOAD SKIPPED: bucket no disponible")
+            return None
+
+        blob = bucket.blob(blob_name)
+
         blob.upload_from_filename(
             str(path),
             content_type="application/pdf"
         )
 
+        print(f"GCS FILE UPLOAD OK: {blob_name}")
         return blob_name
 
-    except Exception:
+    except Exception as e:
+        print("GCS UPLOAD ERROR:", str(e))
         return None
 
 
@@ -62,17 +69,17 @@ def download_file_from_gcs(blob_name, local_path):
     if not blob_name:
         return False
 
-    bucket = _get_bucket()
-
-    if not bucket:
-        return False
-
-    path = Path(local_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    blob = bucket.blob(blob_name)
-
     try:
+        bucket = _get_bucket()
+
+        if not bucket:
+            return False
+
+        path = Path(local_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        blob = bucket.blob(blob_name)
+
         if not blob.exists():
             return False
 
@@ -80,7 +87,8 @@ def download_file_from_gcs(blob_name, local_path):
 
         return path.exists()
 
-    except Exception:
+    except Exception as e:
+        print("GCS DOWNLOAD ERROR:", str(e))
         return False
 
 
@@ -91,17 +99,18 @@ def gcs_file_exists(blob_name):
     if not blob_name:
         return False
 
-    bucket = _get_bucket()
-
-    if not bucket:
-        return False
-
-    blob = bucket.blob(blob_name)
-
     try:
+        bucket = _get_bucket()
+
+        if not bucket:
+            return False
+
+        blob = bucket.blob(blob_name)
+
         return blob.exists()
 
-    except Exception:
+    except Exception as e:
+        print("GCS EXISTS ERROR:", str(e))
         return False
 
 
@@ -112,43 +121,49 @@ def delete_gcs_file(blob_name):
     if not blob_name:
         return False
 
-    bucket = _get_bucket()
-
-    if not bucket:
-        return False
-
-    blob = bucket.blob(blob_name)
-
     try:
+        bucket = _get_bucket()
+
+        if not bucket:
+            return False
+
+        blob = bucket.blob(blob_name)
+
         if not blob.exists():
             return True
 
         blob.delete()
 
+        print(f"GCS DELETE OK: {blob_name}")
         return True
 
-    except Exception:
+    except Exception as e:
+        print("GCS DELETE ERROR:", str(e))
         return False
 
 
 def upload_json_to_gcs(data, blob_name):
     if not is_gcs_enabled():
+        print("GCS JSON UPLOAD SKIPPED: GCS no está habilitado")
         return None
 
     if not blob_name:
+        print("GCS JSON UPLOAD SKIPPED: blob_name vacío")
         return None
 
     if data is None:
+        print("GCS JSON UPLOAD SKIPPED: data vacío")
         return None
-
-    bucket = _get_bucket()
-
-    if not bucket:
-        return None
-
-    blob = bucket.blob(blob_name)
 
     try:
+        bucket = _get_bucket()
+
+        if not bucket:
+            print("GCS JSON UPLOAD SKIPPED: bucket no disponible")
+            return None
+
+        blob = bucket.blob(blob_name)
+
         json_text = json.dumps(
             data,
             ensure_ascii=False,
@@ -160,9 +175,11 @@ def upload_json_to_gcs(data, blob_name):
             content_type="application/json"
         )
 
+        print(f"GCS JSON UPLOAD OK: {blob_name}")
         return blob_name
 
-    except Exception:
+    except Exception as e:
+        print("GCS JSON ERROR:", str(e))
         return None
 
 
@@ -173,14 +190,14 @@ def download_json_from_gcs(blob_name):
     if not blob_name:
         return None
 
-    bucket = _get_bucket()
-
-    if not bucket:
-        return None
-
-    blob = bucket.blob(blob_name)
-
     try:
+        bucket = _get_bucket()
+
+        if not bucket:
+            return None
+
+        blob = bucket.blob(blob_name)
+
         if not blob.exists():
             return None
 
@@ -190,7 +207,8 @@ def download_json_from_gcs(blob_name):
 
         return json.loads(json_text)
 
-    except Exception:
+    except Exception as e:
+        print("GCS JSON DOWNLOAD ERROR:", str(e))
         return None
 
 
@@ -198,14 +216,14 @@ def list_metadata_json_from_gcs(prefix="metadata/"):
     if not is_gcs_enabled():
         return []
 
-    bucket = _get_bucket()
-
-    if not bucket:
-        return []
-
-    metadata_items = []
-
     try:
+        bucket = _get_bucket()
+
+        if not bucket:
+            return []
+
+        metadata_items = []
+
         blobs = bucket.list_blobs(prefix=prefix)
 
         for blob in blobs:
@@ -222,13 +240,15 @@ def list_metadata_json_from_gcs(prefix="metadata/"):
 
                 metadata_items.append(data)
 
-            except Exception:
+            except Exception as e:
+                print("GCS METADATA ITEM ERROR:", str(e))
                 continue
 
-    except Exception:
-        return []
+        return metadata_items
 
-    return metadata_items
+    except Exception as e:
+        print("GCS LIST METADATA ERROR:", str(e))
+        return []
 
 
 def delete_signature_request_files_from_gcs(data):
